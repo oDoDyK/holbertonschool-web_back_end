@@ -1,14 +1,24 @@
-// 100-find.js
-// Script to find documents with name starting by Holberton
+#!/usr/bin/env python3
+""" Find a match with regex """
 
-// Use the database passed as argument
-db = db.getSiblingDB(db.getName());
+from pymongo import MongoClient
 
-// Find documents in school collection where name starts with "Holberton"
-// Using regular expression with case-insensitive option
-db.school.find({ 
-    name: { 
-        $regex: /^Holberton/, 
-        $options: 'i' 
-    } 
-});
+
+def main() -> None:
+    """ Main function """
+    client = MongoClient('mongodb://localhost:27017')
+    db = client['my_db']
+    collection = db['school']
+
+    pipeline = [{'$match': {'name': {'$regex': '^Holberton'}}}]
+
+    documents = collection.aggregate(pipeline)
+
+    for document in documents:
+        print(document)
+
+    client.close()
+
+
+if __name__ == '__main__':
+    main()
