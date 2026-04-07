@@ -1,30 +1,36 @@
 const fs = require('fs');
 
-function countStudents(path) {
+module.exports = function countStudents(path) {
   try {
-    const data = fs.readFileSync(path, 'utf-8');
-    const line = data.split('\n');
-    const rows = line.slice(1).filter((row) => row.trim() !== '' && row.split(',').length === 4);
-
+    // read data
+    const data = fs.readFileSync(path, { encoding: 'utf-8' });
+    // split data and taking only list without header
+    const lines = data.split('\n').slice(1, -1);
+    // give the header of data
+    const header = data.split('\n').slice(0, 1)[0].split(',');
+    // find firstname and field index
+    const idxFn = header.findIndex((ele) => ele === 'firstname');
+    const idxFd = header.findIndex((ele) => ele === 'field');
+    // declarate two dictionaries for count each fields and store list of students
     const fields = {};
-    rows.forEach((row) => {
-      const colums = row.split(',');
-      const firstName = colums[0].trim();
-      const field = colums[3].trim();
+    const students = {};
 
-      if (!fields[field]) {
-        fields[field] = [];
-      }
-      fields[field].push(firstName);
+    lines.forEach((line) => {
+      const list = line.split(',');
+      if (!fields[list[idxFd]]) fields[list[idxFd]] = 0;
+      fields[list[idxFd]] += 1;
+      if (!students[list[idxFd]]) students[list[idxFd]] = '';
+      students[list[idxFd]] += students[list[idxFd]] ? `, ${list[idxFn]}` : list[idxFn];
     });
 
-    console.log(`Number of students: ${rows.length}`);
-    for (const [field, students] of Object.entries(fields)) {
-      console.log(`Number of students in ${field}: ${students.length}. List: ${students.join(', ')}`);
+    console.log(`Number of students: ${lines.length}`);
+    for (const key in fields) {
+      if (Object.hasOwnProperty.call(fields, key)) {
+        const element = fields[key];
+        console.log(`Number of students in ${key}: ${element}. List: ${students[key]}`);
+      }
     }
   } catch (error) {
     throw new Error('Cannot load the database');
   }
-}
-
-module.exports = countStudents;
+};

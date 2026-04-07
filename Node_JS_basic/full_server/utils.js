@@ -1,27 +1,31 @@
 const fs = require('fs');
-const path = require('path');
 
-function readDatabase(filepath) {
-  return new Promise((resolve, reject) => {
-    const absolutePath = path.resolve(filepath);
-    fs.promises.readFile(absolutePath, 'utf-8')
-      .then((data) => {
-        const lines = data.split('\n').slice(1);
-        const filteredLines = lines.filter((line) => line.trim() !== '');
+function readDatabase(path) {
+  return new Promise((resolve, reject) => { // eslint-disable-line consistent-return
+    if (!path) {
+      return reject(new Error('Cannot load the database'));
+    }
+    fs.readFile(path, 'utf8', (error, data) => {
+      if (error) {
+        return reject(new Error('Cannot load the database'));
+      }
+      const studentline = data.split('\n');
+      const students = studentline.slice(1);
+      const validStudents = students.filter((line) => line.trim() !== '');
+      const studentsByField = {};
 
-        const students = {};
-        filteredLines.forEach((line) => {
-          const [firstname, , , field] = line.split(',');
-          if (!students[field]) students[field] = [];
-          students[field].push(firstname);
-        });
+      for (const studentline of validStudents) {
+        const parts = studentline.split(',');
+        const firstname = parts[0];
+        const field = parts[parts.length - 1];
 
-        resolve(students);
-      })
-      .catch((Error) => {
-        reject(new Error('Cannot load the database'));
-      });
+        if (!studentsByField[field]) {
+          studentsByField[field] = [];
+        }
+        studentsByField[field].push(firstname);
+      }
+      return resolve(studentsByField);
+    });
   });
 }
-
 module.exports = readDatabase;
