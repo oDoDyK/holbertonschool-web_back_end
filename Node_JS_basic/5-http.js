@@ -1,67 +1,58 @@
 const http = require('http');
-const fs = require('fs');
+const countStudents = require('./3-read_file_async');
+// Retrieve the file path from the command-line arguments
+const filePath = process.argv[2];
 
-function countStudents(path) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, { encoding: 'utf-8' }, (err, data) => {
-      if (err) return reject(Error('Cannot load the database'));
-      // split data and taking only list without header
-      const lines = data.split('\n').slice(1, -1);
-      // give the header of data
-      const header = data.split('\n').slice(0, 1)[0].split(',');
-      // find firstname and field index
-      const idxFn = header.findIndex((ele) => ele === 'firstname');
-      const idxFd = header.findIndex((ele) => ele === 'field');
-      // declarate two dictionaries for count each fields and store list of students
-      const fields = {};
-      const students = {};
-      // it will contain all data
-      const all = {};
-
-      lines.forEach((line) => {
-        const list = line.split(',');
-        if (!fields[list[idxFd]]) fields[list[idxFd]] = 0;
-        fields[list[idxFd]] += 1;
-        if (!students[list[idxFd]]) students[list[idxFd]] = '';
-        students[list[idxFd]] += students[list[idxFd]]
-          ? `, ${list[idxFn]}`
-          : list[idxFn];
-      });
-
-      all.numberStudents = `Number of students: ${lines.length}\n`;
-      all.listStudents = [];
-      for (const key in fields) {
-        if (Object.hasOwnProperty.call(fields, key)) {
-          const element = fields[key];
-          all.listStudents.push(`Number of students in ${key}: ${element}. List: ${students[key]}`);
-        }
-      }
-      return resolve(all);
-    });
-  });
+if (!filePath) {
+    console.error('Usage: node 5-http.js <database.csv>');
+    process.exit(1); // Exit if no file path is provided
 }
 
-const hostname = '127.0.0.1';
-const port = 1245;
 
-const app = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  if (req.url === '/') res.end('Hello Holberton School!');
-  if (req.url === '/students') {
-    res.write('This is the list of our students\n');
-    countStudents(process.argv[2])
-      .then((data) => {
-        res.write(data.numberStudents);
-        res.write(data.listStudents.join('\n'));
-        res.end();
-      })
-      .catch((err) => {
-        res.end(err.message);
-      });
-  }
+// Create an HTTP server
+const app = http.createServer(async (req, res) => {
+    // Send a response depending on the URL
+    if (req.url === '/') {
+        // Set the response header
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Hello Atlas School!');
+    } else if (req.url === '/students') {
+        try {
+            // Capture the output from console.log
+            let output = '';
+            const originalConsoleLog = console.log;
+
+            // Override console.log to capture the output in a string
+            console.log = (message) => {
+                output += message + '\n';
+            };
+
+            // Call countStudents (which uses console.log internally)
+            await countStudents(filePath);
+
+            // Restore the original console.log
+            console.log = originalConsoleLog;
+
+            // Add a header message and send the response
+            const responseText = `This is the list of our students\n${output}`;
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end(responseText);
+        } catch (err) {
+            // Restore the original console.log on error
+            console.log = originalConsoleLog;
+            // Handle errors that occur in countStudents
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end(`Error: ${err.message}`);
+        }
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('404 Not Found');
+    }
 });
 
-app.listen(port, hostname);
-
-module.exports = app;
+// Export the app (HTTP server)
+// module.exports = app;
+// Start the server on port 1245
+app.listen(1245, () => {
+    console.log('Server is running on http://localhost:1245');
+});
